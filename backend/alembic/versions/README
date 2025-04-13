@@ -1,0 +1,4 @@
+# Directory para scripts de migración
+
+Este directorio contiene los scripts de migración generados por Alembic.
+No eliminar este directorio. 

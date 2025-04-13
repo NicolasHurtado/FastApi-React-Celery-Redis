@@ -1,0 +1,28 @@
+fastapi
+uvicorn[standard]
+
+# ORM y driver de base de datos asíncrono
+sqlalchemy[asyncio]
+asyncpg
+# Usar la versión compilada de psycopg2 para mayor compatibilidad
+psycopg2
+
+# Pydantic para validación
+pydantic[email]
+pydantic-settings
+
+# Celery y Redis
+celery
+redis
+
+# Para variables de entorno
+python-dotenv
+
+# Contraseñas
+passlib[bcrypt]
+
+# JWT para autenticación
+python-jose[cryptography]
+
+# Migraciones de base de datos
+alembic 
