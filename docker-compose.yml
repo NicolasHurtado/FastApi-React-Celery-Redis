@@ -19,8 +19,8 @@ services:
     networks:
       - vacation_network
     # En producción, no expongas este puerto al host
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - "5432:5432"
 
   redis:
     image: redis:7-alpine
@@ -35,8 +35,8 @@ services:
     networks:
       - vacation_network
     # En producción, no expongas este puerto al host
-    # ports:
-    #   - "6379:6379"
+    ports:
+      - "6379:6379"
 
   backend:
     build:
@@ -44,6 +44,7 @@ services:
       dockerfile: Dockerfile
     command: ./start.sh
     volumes:
+      - ./backend:/app
       - backend_static:/app/static
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-vacation_user}:${POSTGRES_PASSWORD:-vacation_pass}@db:5432/${POSTGRES_DB:-vacation_db}
@@ -62,25 +63,25 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
 
-#  celery_worker:
-#    build:
-#      context: ./backend
-#      dockerfile: Dockerfile
-#    # Comando para iniciar el worker de Celery
-#    command: celery -A app.worker.celery_app worker --loglevel=${LOG_LEVEL:-info}
-#    environment:
-#      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-vacation_user}:${POSTGRES_PASSWORD:-vacation_pass}@db:5432/${POSTGRES_DB:-vacation_db}
-#      - REDIS_URL=redis://redis:6379/0
-#      - SECRET_KEY=${SECRET_KEY:-CAMBIAR_EN_PRODUCCION_USAR_VALOR_SEGURO}
-#      - ENVIRONMENT=${ENVIRONMENT:-production}
-#    depends_on:
-#      db:
-#        condition: service_healthy
-#      redis:
-#        condition: service_healthy
-#    restart: unless-stopped
-#    networks:
-#      - vacation_network
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    # Comando para iniciar el worker de Celery
+    command: celery -A app.worker.celery_app worker --loglevel=${LOG_LEVEL:-info}
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-vacation_user}:${POSTGRES_PASSWORD:-vacation_pass}@db:5432/${POSTGRES_DB:-vacation_db}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-CAMBIAR_EN_PRODUCCION_USAR_VALOR_SEGURO}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vacation_network
 
   frontend:
     build:

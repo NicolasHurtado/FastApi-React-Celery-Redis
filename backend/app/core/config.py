@@ -1,7 +1,7 @@
 import secrets
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
+from pydantic import PostgresDsn, validator, AnyHttpUrl
 
-from pydantic import PostgresDsn, validator
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "production"
     
     # Configuración de seguridad
-    SECRET_KEY: str
+    SECRET_KEY: str = secrets.token_urlsafe(32)
     # Generación por defecto de clave segura en caso de que no se proporcione
     @validator("SECRET_KEY", pre=True, always=True)
     def set_secret_key(cls, v: Optional[str], values: Dict[str, Any]) -> str:
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
         return v
     
     # Configuración JWT
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 3  # 3 días por defecto
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 60 minutos * 24 horas * 8 días = 8 días
     ALGORITHM: str = "HS256"
     
     # Base de datos
@@ -46,9 +46,13 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str
     
+    # Usuario inicial (superusuario)
+    FIRST_SUPERUSER: str = "admin@example.com"
+    FIRST_SUPERUSER_PASSWORD: str = "admin123"
+    
     # Opciones de CORS (Cross-Origin Resource Sharing)
     # Lista de orígenes permitidos para conectarse a la API
-    BACKEND_CORS_ORIGINS: list[str] = ["http://localhost", "http://localhost:8080", "http://localhost:3000", "http://prueba.test"]
+    BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
     @validator("BACKEND_CORS_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
@@ -58,8 +62,10 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-    # Logging
+    # Configuración de logging
     LOG_LEVEL: str = "info"
+    LOG_DIR: str = "logs"
+    SQL_DEBUG: bool = False
     
     class Config:
         case_sensitive = True

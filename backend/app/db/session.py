@@ -1,8 +1,10 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+# from sqlalchemy.ext.declarative import declarative_base # Ya no se define aquí
 
 from app.core.config import settings
+# Importar Base si algún módulo futuro en este archivo la necesitara
+# from app.db.base import Base
 
 # Crear el motor asíncrono de SQLAlchemy
 engine = create_async_engine(
@@ -18,9 +20,6 @@ AsyncSessionLocal = sessionmaker(
     class_=AsyncSession,
     expire_on_commit=False,
 )
-
-# Base declarativa para modelos ORM
-Base = declarative_base()
 
 # Dependencia para FastAPI
 async def get_db() -> AsyncSession:

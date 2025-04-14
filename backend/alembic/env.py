@@ -15,7 +15,7 @@ PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 sys.path.append(PROJECT_ROOT)
 
 # Importar la Base de nuestros modelos y la configuración
-from app.db.session import Base
+from app.db.base import Base
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

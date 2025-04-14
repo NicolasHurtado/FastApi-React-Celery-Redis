@@ -23,6 +23,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+logs/*
 
 # PyInstaller
 # Usually these files are written by a python script from a template
@@ -139,6 +140,7 @@ dmypy.json
 
 # Alembic - Opcional: Si generaras una BD local para tests rápidos
 alembic.db
+alembic/versions/*
 
 # OS generated files
 .DS_Store

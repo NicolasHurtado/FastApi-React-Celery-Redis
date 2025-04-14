@@ -1,5 +1,6 @@
 fastapi
 uvicorn[standard]
+websockets>=10.4
 
 # ORM y driver de base de datos asíncrono
 sqlalchemy[asyncio]
@@ -12,8 +13,9 @@ pydantic[email]
 pydantic-settings
 
 # Celery y Redis
-celery
-redis
+celery>=5.3.0
+redis>=4.5.0
+aioredis>=2.0.0
 
 # Para variables de entorno
 python-dotenv
@@ -23,6 +25,9 @@ passlib[bcrypt]
 
 # JWT para autenticación
 python-jose[cryptography]
+
+# Para procesar datos de formulario (necesario para OAuth2)
+python-multipart
 
 # Migraciones de base de datos
 alembic 

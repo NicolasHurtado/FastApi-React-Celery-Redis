@@ -1,0 +1,12 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# No copiar nada, usaremos volúmenes para montar el código fuente
+# Esto permitirá hot-reloading
+
+# Exponer puerto para el servidor de desarrollo
+EXPOSE 3000
+
+# Comando por defecto
+CMD ["sh", "-c", "npm install && npm start"] 

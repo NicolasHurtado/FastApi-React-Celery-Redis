@@ -1,0 +1,42 @@
+FROM python:3.11-slim
+
+# Configurar variables de entorno
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=off \
+    PIP_DISABLE_PIP_VERSION_CHECK=on \
+    POETRY_VERSION=1.6.1
+
+
+# Instalar dependencias del sistema
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    postgresql-client \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+
+WORKDIR /app
+
+
+# Copiar archivos de requisitos primero para aprovechar la caché de Docker
+COPY requirements.txt requirements-dev.txt ./
+
+# Instalar dependencias de Python (incluidas las de desarrollo)
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements-dev.txt
+
+# Copiar el código de la aplicación
+COPY . .
+
+# Dar permisos de ejecución al script de inicio
+RUN chmod +x start.sh
+
+
+
+# Exponer puerto
+EXPOSE 8000
+
+# Define el comando de entrada para producción
+CMD ["./start.sh"] 
