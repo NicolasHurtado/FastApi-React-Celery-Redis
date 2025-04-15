@@ -16,7 +16,7 @@ class RequestStatus(str, enum.Enum):
 class VacationRequest(Base):
     __tablename__ = "vacation_requests"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     status = Column(SQLEnum(RequestStatus), default=RequestStatus.PENDING, nullable=False)
@@ -30,8 +30,8 @@ class VacationRequest(Base):
     reviewer_comment = Column(String, nullable=True)
     
     # Relaciones con usuarios
-    requester_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    reviewer_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    requester_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     # Relaciones bidireccionales con usuarios
     requester = relationship("User", foreign_keys=[requester_id], back_populates="vacation_requests")

@@ -114,7 +114,7 @@ async def read_notifications(
 async def update_user_notification(
     *,
     db: AsyncSession = Depends(get_db),
-    notification_id: UUID,
+    notification_id: int,
     notification_in: NotificationUpdate,
     current_user: User = Depends(get_current_user)
 ) -> Any:
@@ -127,11 +127,8 @@ async def update_user_notification(
     )
     
     try:
-        # Obtener notificaciones del usuario
-        notifications = await crud.get_user_notifications(db=db, user_id=current_user.id)
-        
-        # Verificar si la notificación pertenece al usuario
-        notification = next((n for n in notifications if n.id == notification_id), None)
+        # Obtener la notificación directamente
+        notification = await crud.get_notification(db=db, id=notification_id)
         
         if not notification:
             logger.warning(
@@ -141,6 +138,17 @@ async def update_user_notification(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Notificación no encontrada"
+            )
+        
+        # Verificar que la notificación pertenece al usuario o es superusuario
+        if notification.user_id != current_user.id and not current_user.is_superuser:
+            logger.warning(
+                f"Intento de actualizar notificación sin permisos: {notification_id}",
+                extra={"data": {"user_id": str(current_user.id)}}
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para actualizar esta notificación"
             )
         
         # Actualizar la notificación
@@ -175,7 +183,7 @@ async def update_user_notification(
 async def delete_user_notification(
     *,
     db: AsyncSession = Depends(get_db),
-    notification_id: UUID,
+    notification_id: int,
     current_user: User = Depends(get_current_user)
 ) -> Response:
     """
@@ -187,11 +195,8 @@ async def delete_user_notification(
     )
     
     try:
-        # Obtener notificaciones del usuario
-        notifications = await crud.get_user_notifications(db=db, user_id=current_user.id)
-        
-        # Verificar si la notificación pertenece al usuario
-        notification = next((n for n in notifications if n.id == notification_id), None)
+        # Obtener la notificación directamente
+        notification = await crud.get_notification(db=db, id=notification_id)
         
         if not notification:
             logger.warning(
@@ -201,6 +206,17 @@ async def delete_user_notification(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Notificación no encontrada"
+            )
+        
+        # Verificar que la notificación pertenece al usuario o es superusuario
+        if notification.user_id != current_user.id and not current_user.is_superuser:
+            logger.warning(
+                f"Intento de eliminar notificación sin permisos: {notification_id}",
+                extra={"data": {"user_id": str(current_user.id)}}
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permiso para eliminar esta notificación"
             )
         
         # Eliminar la notificación
@@ -245,7 +261,7 @@ async def read_unread_count(
 
 @router.get("/{notification_id}", response_model=Notification)
 async def read_notification(
-    notification_id: uuid.UUID,
+    notification_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
@@ -268,8 +284,8 @@ async def read_notification(
             detail="Notificación no encontrada"
         )
     
-    # Verificar que la notificación pertenece al usuario
-    if notification.user_id != current_user.id:
+    # Verificar que la notificación pertenece al usuario o es superusuario
+    if notification.user_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para acceder a esta notificación"
@@ -280,7 +296,7 @@ async def read_notification(
 
 @router.patch("/{notification_id}/mark-as-read", response_model=Notification)
 async def mark_notification_as_read(
-    notification_id: uuid.UUID,
+    notification_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ) -> Any:
@@ -303,8 +319,8 @@ async def mark_notification_as_read(
             detail="Notificación no encontrada"
         )
     
-    # Verificar que la notificación pertenece al usuario
-    if notification.user_id != current_user.id:
+    # Verificar que la notificación pertenece al usuario o es superusuario
+    if notification.user_id != current_user.id and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para acceder a esta notificación"

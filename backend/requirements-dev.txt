@@ -14,6 +14,7 @@ mypy>=1.3.0
 
 # Para generar datos de prueba
 faker>=18.0.0
+factory-boy>=3.2.1
 
 # Para mock y coverage
 pytest-mock>=3.10.0

@@ -7,13 +7,16 @@ import os
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from fastapi import Depends
+from fastapi.exceptions import HTTPException
+from fastapi import status
 
 from app.db.base import Base
 from app.db.session import get_db
 from app.core.config import settings
 from app.models.user import User, UserRole
 from app.main import app
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, reusable_oauth2
 from app.core.logging import setup_logging
 
 
@@ -181,16 +184,36 @@ async def hr_user_token_headers(client: AsyncClient, test_hr_user: User) -> Dict
 
 
 # Sobreescribir la dependencia de usuario autenticado para los tests
-async def override_get_current_user_for_tests() -> User:
-    """Sobreescribir la dependencia para tests."""
-    return User(
-        id=uuid.uuid4(),
-        email="test@example.com",
-        full_name="Test User",
-        role=UserRole.EMPLOYEE,
-        is_active=True,
-        is_superuser=False
-    )
+async def override_get_current_user_for_tests(
+    db: AsyncSession = Depends(get_db), 
+    token: str = Depends(reusable_oauth2)
+) -> User:
+    """Sobreescribe la dependencia para usar el usuario real del token en tests.
+    
+    A diferencia de la sobreescritura anterior, esta función extrae el usuario del token
+    en lugar de devolver siempre el mismo usuario, lo que permite que las pruebas que
+    utilizan diferentes tokens (superuser_token_headers, normal_user_token_headers) 
+    funcionen correctamente.
+    """
+    from app.core.security import get_subject_from_token
+    from app.crud.user import get_user
+    
+    # Extraer el ID del usuario del token
+    user_id = get_subject_from_token(token)
+    
+    # Convertir a entero si es necesario
+    if isinstance(user_id, str) and user_id.isdigit():
+        user_id = int(user_id)
+    
+    # Obtener el usuario de la base de datos
+    user = await get_user(db, user_id=user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no encontrado"
+        )
+    
+    return user
 
 app.dependency_overrides[get_current_user] = override_get_current_user_for_tests 
 
@@ -202,3 +225,33 @@ def configure_logging():
     log_level = os.getenv("TEST_LOG_LEVEL", "error")
     setup_logging(log_level)
     return None 
+
+
+@pytest.fixture
+async def superuser(client: AsyncClient, test_superuser: User) -> User:
+    """Fixture que proporciona directamente el objeto de usuario superusuario.
+    
+    A diferencia de otros métodos que extraen el usuario del token, este fixture
+    proporciona directamente el objeto User, evitando llamadas API adicionales.
+    """
+    return test_superuser
+
+
+@pytest.fixture
+async def normal_user(client: AsyncClient, test_normal_user: User) -> User:
+    """Fixture que proporciona directamente el objeto de usuario normal.
+    
+    A diferencia de otros métodos que extraen el usuario del token, este fixture
+    proporciona directamente el objeto User, evitando llamadas API adicionales.
+    """
+    return test_normal_user
+
+
+@pytest.fixture
+async def hr_user(client: AsyncClient, test_hr_user: User) -> User:
+    """Fixture que proporciona directamente el objeto de usuario HR.
+    
+    A diferencia de otros métodos que extraen el usuario del token, este fixture
+    proporciona directamente el objeto User, evitando llamadas API adicionales.
+    """
+    return test_hr_user 

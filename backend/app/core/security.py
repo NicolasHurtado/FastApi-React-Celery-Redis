@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from typing import Any, Optional, Union
 
 from jose import jwt
+from jose.exceptions import JWTError
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -33,25 +34,45 @@ def create_access_token(
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def get_subject_from_token(token: str) -> str:
+    """Extrae el subject (sub) de un token JWT.
+    
+    Args:
+        token: Token JWT codificado.
+        
+    Returns:
+        El subject del token, generalmente el ID del usuario, como string.
+        
+    Raises:
+        JWTError: Si el token es inválido o ha expirado.
+    """
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+    subject = payload.get("sub")
+    if subject is None:
+        raise JWTError("Token no contiene un subject válido")
+    
+    # Asegurarnos de que siempre devolvemos un string
+    return str(subject)
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifica una contraseña plana contra su hash.
+    """Verifica si una contraseña en texto plano coincide con su hash.
 
     Args:
-        plain_password: La contraseña sin hashear.
-        hashed_password: La contraseña hasheada almacenada.
+        plain_password: Contraseña en texto plano.
+        hashed_password: Hash de la contraseña.
 
     Returns:
-        True si la contraseña coincide, False en caso contrario.
+        True si la contraseña coincide con el hash, False en caso contrario.
     """
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """Genera el hash de una contraseña.
+    """Genera un hash para una contraseña.
 
     Args:
-        password: La contraseña a hashear.
+        password: Contraseña en texto plano.
 
     Returns:
-        El hash de la contraseña.
+        Hash de la contraseña.
     """
     return pwd_context.hash(password) 

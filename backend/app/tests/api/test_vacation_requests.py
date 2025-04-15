@@ -7,11 +7,18 @@ from fastapi import status
 from app.core.config import settings
 from app.models.vacation_request import RequestStatus
 from app.schemas.vacation_request import VacationRequestCreate
+from app.tests.factories.models import UserFactory, VacationRequestFactory
 
 
 @pytest.mark.asyncio
-async def test_create_vacation_request(client: AsyncClient, normal_user_token_headers):
+async def test_create_vacation_request(client: AsyncClient, db_session, normal_user_token_headers):
     """Prueba la creación de una solicitud de vacaciones."""
+    # Obtener información del usuario actual
+    from app.core.security import get_subject_from_token
+    
+    token = normal_user_token_headers["Authorization"].split()[1]
+    user_id = get_subject_from_token(token)
+    
     # Crear datos para la solicitud
     start_date = date.today() + timedelta(days=10)
     end_date = start_date + timedelta(days=5)
@@ -40,8 +47,21 @@ async def test_create_vacation_request(client: AsyncClient, normal_user_token_he
 
 
 @pytest.mark.asyncio
-async def test_read_vacation_requests(client: AsyncClient, normal_user_token_headers):
+async def test_read_vacation_requests(client: AsyncClient, db_session, normal_user_token_headers):
     """Prueba obtener las solicitudes de vacaciones del usuario actual."""
+    # Obtener información del usuario actual
+    from app.core.security import get_subject_from_token
+    
+    token = normal_user_token_headers["Authorization"].split()[1]
+    user_id = get_subject_from_token(token)
+    
+    # Crear varias solicitudes para este usuario
+    for _ in range(3):
+        await VacationRequestFactory.create_async(
+            db=db_session,
+            requester_id=user_id
+        )
+    
     response = await client.get(
         f"{settings.API_V1_STR}/vacation-requests/",
         headers=normal_user_token_headers
@@ -50,11 +70,22 @@ async def test_read_vacation_requests(client: AsyncClient, normal_user_token_hea
     assert response.status_code == status.HTTP_200_OK
     content = response.json()
     assert isinstance(content, list)
+    assert len(content) >= 3  # Al menos deberían estar las solicitudes que creamos
 
 
 @pytest.mark.asyncio
-async def test_read_vacation_requests_for_review(client: AsyncClient, hr_user_token_headers):
+async def test_read_vacation_requests_for_review(client: AsyncClient, db_session, hr_user_token_headers):
     """Prueba obtener las solicitudes de vacaciones pendientes para revisión."""
+    # Crear varios empleados con solicitudes pendientes
+    for _ in range(3):
+        employee = await UserFactory.create_async(db=db_session)
+        await VacationRequestFactory.create_async(
+            db=db_session,
+            requester=employee,
+            requester_id=employee.id,
+            status=RequestStatus.PENDING
+        )
+    
     response = await client.get(
         f"{settings.API_V1_STR}/vacation-requests/for-review",
         headers=hr_user_token_headers
@@ -63,29 +94,48 @@ async def test_read_vacation_requests_for_review(client: AsyncClient, hr_user_to
     assert response.status_code == status.HTTP_200_OK
     content = response.json()
     assert isinstance(content, list)
+    assert len(content) >= 3  # Al menos deberían estar las solicitudes que creamos
 
 
 @pytest.mark.asyncio
-async def test_read_vacation_request(client: AsyncClient, normal_user_token_headers):
+async def test_read_vacation_request(client: AsyncClient, db_session, normal_user_token_headers):
     """Prueba obtener una solicitud de vacaciones específica."""
-    # Primero creamos una solicitud
-    request_id = await test_create_vacation_request(client, normal_user_token_headers)
+    # Obtener información del usuario actual
+    from app.core.security import get_subject_from_token
+    
+    token = normal_user_token_headers["Authorization"].split()[1]
+    user_id = get_subject_from_token(token)
+    
+    # Crear una solicitud para este usuario
+    request = await VacationRequestFactory.create_async(
+        db=db_session,
+        requester_id=user_id
+    )
     
     response = await client.get(
-        f"{settings.API_V1_STR}/vacation-requests/{request_id}",
+        f"{settings.API_V1_STR}/vacation-requests/{request.id}",
         headers=normal_user_token_headers
     )
     
     assert response.status_code == status.HTTP_200_OK
     content = response.json()
-    assert content["id"] == request_id
+    assert content["id"] == str(request.id)
 
 
 @pytest.mark.asyncio
-async def test_update_vacation_request(client: AsyncClient, normal_user_token_headers):
+async def test_update_vacation_request(client: AsyncClient, db_session, normal_user_token_headers):
     """Prueba actualizar una solicitud de vacaciones."""
-    # Primero creamos una solicitud
-    request_id = await test_create_vacation_request(client, normal_user_token_headers)
+    # Obtener información del usuario actual
+    from app.core.security import get_subject_from_token
+    
+    token = normal_user_token_headers["Authorization"].split()[1]
+    user_id = get_subject_from_token(token)
+    
+    # Crear una solicitud para este usuario
+    request = await VacationRequestFactory.create_async(
+        db=db_session,
+        requester_id=user_id
+    )
     
     # Actualizamos la solicitud
     data = {
@@ -93,7 +143,7 @@ async def test_update_vacation_request(client: AsyncClient, normal_user_token_he
     }
     
     response = await client.put(
-        f"{settings.API_V1_STR}/vacation-requests/{request_id}",
+        f"{settings.API_V1_STR}/vacation-requests/{request.id}",
         headers=normal_user_token_headers,
         json=data
     )
@@ -101,18 +151,27 @@ async def test_update_vacation_request(client: AsyncClient, normal_user_token_he
     assert response.status_code == status.HTTP_200_OK
     content = response.json()
     assert content["reason"] == data["reason"]
-    assert content["id"] == request_id
+    assert content["id"] == str(request.id)
 
 
 @pytest.mark.asyncio
-async def test_delete_vacation_request(client: AsyncClient, normal_user_token_headers):
+async def test_delete_vacation_request(client: AsyncClient, db_session, normal_user_token_headers):
     """Prueba eliminar una solicitud de vacaciones."""
-    # Primero creamos una solicitud
-    request_id = await test_create_vacation_request(client, normal_user_token_headers)
+    # Obtener información del usuario actual
+    from app.core.security import get_subject_from_token
+    
+    token = normal_user_token_headers["Authorization"].split()[1]
+    user_id = get_subject_from_token(token)
+    
+    # Crear una solicitud para este usuario
+    request = await VacationRequestFactory.create_async(
+        db=db_session,
+        requester_id=user_id
+    )
     
     # Eliminamos la solicitud
     response = await client.delete(
-        f"{settings.API_V1_STR}/vacation-requests/{request_id}",
+        f"{settings.API_V1_STR}/vacation-requests/{request.id}",
         headers=normal_user_token_headers
     )
     
@@ -120,7 +179,7 @@ async def test_delete_vacation_request(client: AsyncClient, normal_user_token_he
     
     # Verificamos que la solicitud ya no existe
     response = await client.get(
-        f"{settings.API_V1_STR}/vacation-requests/{request_id}",
+        f"{settings.API_V1_STR}/vacation-requests/{request.id}",
         headers=normal_user_token_headers
     )
     
@@ -128,16 +187,26 @@ async def test_delete_vacation_request(client: AsyncClient, normal_user_token_he
 
 
 @pytest.mark.asyncio
-async def test_approve_vacation_request(client: AsyncClient, normal_user_token_headers, hr_user_token_headers):
+async def test_approve_vacation_request(client: AsyncClient, db_session, normal_user_token_headers, hr_user_token_headers):
     """Prueba aprobar una solicitud de vacaciones."""
-    # Primero creamos una solicitud
-    request_id = await test_create_vacation_request(client, normal_user_token_headers)
+    # Obtener información del usuario normal
+    from app.core.security import get_subject_from_token
+    
+    token = normal_user_token_headers["Authorization"].split()[1]
+    employee_id = get_subject_from_token(token)
+    
+    # Crear una solicitud para este usuario
+    request = await VacationRequestFactory.create_async(
+        db=db_session,
+        requester_id=employee_id,
+        status=RequestStatus.PENDING
+    )
     
     # Aprobamos la solicitud (rol HR)
     data = {"status": RequestStatus.APPROVED.value}
     
     response = await client.put(
-        f"{settings.API_V1_STR}/vacation-requests/{request_id}",
+        f"{settings.API_V1_STR}/vacation-requests/{request.id}",
         headers=hr_user_token_headers,
         json=data
     )

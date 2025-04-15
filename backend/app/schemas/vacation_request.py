@@ -41,12 +41,12 @@ class VacationRequestUpdate(BaseModel):
 
 # Propiedades compartidas en respuestas
 class VacationRequestInDBBase(VacationRequestBase):
-    id: uuid.UUID
-    requester_id: uuid.UUID
+    id: int
+    requester_id: int
     status: RequestStatus
     created_at: date
     updated_at: Optional[date] = None
-    reviewer_id: Optional[uuid.UUID] = None
+    reviewer_id: Optional[int] = None
     reviewer_comment: Optional[str] = None
 
     class Config:

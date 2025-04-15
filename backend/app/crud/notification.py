@@ -28,7 +28,8 @@ async def create_notification(
         user_id=obj_in.user_id,
         type=obj_in.type,
         message=obj_in.message,
-        related_request_id=obj_in.related_request_id
+        related_request_id=obj_in.related_request_id,
+        read=obj_in.read
     )
     db.add(db_obj)
     await db.commit()
@@ -38,7 +39,7 @@ async def create_notification(
 
 async def get_notification(
     db: AsyncSession, 
-    id: uuid.UUID
+    id: int
 ) -> Optional[Notification]:
     """
     Obtiene una notificación por su ID.
@@ -56,7 +57,7 @@ async def get_notification(
 
 async def get_user_notifications(
     db: AsyncSession, 
-    user_id: uuid.UUID,
+    user_id: Union[int, uuid.UUID],
     skip: int = 0, 
     limit: int = 100,
     unread_only: bool = False
@@ -66,7 +67,7 @@ async def get_user_notifications(
     
     Args:
         db: Sesión de base de datos
-        user_id: ID del usuario
+        user_id: ID del usuario (puede ser int o UUID)
         skip: Número de registros a saltar
         limit: Número máximo de registros a devolver
         unread_only: Si es True, solo devuelve notificaciones no leídas
@@ -86,18 +87,19 @@ async def get_user_notifications(
 
 async def get_unread_count(
     db: AsyncSession, 
-    user_id: uuid.UUID
+    user_id: int
 ) -> int:
     """
     Obtiene el número de notificaciones no leídas de un usuario.
     
     Args:
         db: Sesión de base de datos
-        user_id: ID del usuario
+        user_id: ID del usuario (puede ser int o UUID)
         
     Returns:
         Número de notificaciones no leídas
     """
+    print(f"user_id: {user_id}")
     query = select(Notification).where(
         and_(
             Notification.user_id == user_id,
@@ -140,7 +142,7 @@ async def update_notification(
 
 async def mark_as_read(
     db: AsyncSession,
-    notification_id: uuid.UUID
+    notification_id: int
 ) -> Optional[Notification]:
     """
     Marca una notificación como leída.
@@ -164,14 +166,14 @@ async def mark_as_read(
 
 async def mark_all_as_read(
     db: AsyncSession,
-    user_id: uuid.UUID
+    user_id: Union[int, uuid.UUID]
 ) -> int:
     """
     Marca todas las notificaciones de un usuario como leídas.
     
     Args:
         db: Sesión de base de datos
-        user_id: ID del usuario
+        user_id: ID del usuario (puede ser int o UUID)
         
     Returns:
         Número de notificaciones actualizadas
@@ -186,7 +188,7 @@ async def mark_all_as_read(
 
 async def delete_notification(
     db: AsyncSession, 
-    id: uuid.UUID
+    id: int
 ) -> Optional[Notification]:
     """
     Elimina una notificación.

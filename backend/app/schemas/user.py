@@ -27,7 +27,7 @@ class UserUpdate(UserBase):
 
 # Propiedades compartidas almacenadas en DB
 class UserInDBBase(UserBase):
-    id: uuid.UUID
+    id: int
     # Nota: No incluimos password aquí por seguridad
 
     class Config:

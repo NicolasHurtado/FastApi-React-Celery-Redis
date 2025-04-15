@@ -1,7 +1,7 @@
 import uuid
 import enum
 from datetime import datetime
-from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey, Enum as SQLEnum, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -18,11 +18,11 @@ class NotificationType(str, enum.Enum):
 class Notification(Base):
     __tablename__ = "notifications"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     type = Column(SQLEnum(NotificationType), nullable=False)
     message = Column(String, nullable=False)
-    related_request_id = Column(UUID(as_uuid=True), ForeignKey("vacation_requests.id"), nullable=True)
+    related_request_id = Column(Integer, ForeignKey("vacation_requests.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     read = Column(Boolean, default=False, nullable=False)
     
