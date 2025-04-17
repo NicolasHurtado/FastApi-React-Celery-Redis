@@ -1,8 +1,8 @@
-import uuid
+"""Manage users endpoints"""
+
 from typing import Any, List
 
-from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.encoders import jsonable_encoder
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (get_current_active_user, get_current_superuser,
@@ -24,18 +24,18 @@ async def read_users(
     current_user: User = Depends(get_current_manager_or_admin),
 ) -> Any:
     """
-    Obtiene una lista paginada de usuarios.
+    Get a paginated list of users.
     
-    Solo accesible para administradores y managers.
+    Only accessible to administrators and managers.
     
     Args:
-        db: Sesión de base de datos
-        skip: Número de registros a saltar (paginación)
-        limit: Número máximo de registros a devolver
-        current_user: Usuario autenticado actual
+        db: Database session
+        skip: Number of records to skip (pagination)
+        limit: Maximum number of records to return
+        current_user: Current authenticated user
         
     Returns:
-        Lista de usuarios
+        List of users
     """
     users = await get_users(db, skip=skip, limit=limit)
     return users
@@ -49,20 +49,20 @@ async def create_new_user(
     current_user: User = Depends(get_current_superuser),
 ) -> Any:
     """
-    Crea un nuevo usuario.
+    Create a new user.
     
-    Solo accesible para superusuarios.
+    Only accessible to superusers.
     
     Args:
-        db: Sesión de base de datos
-        user_in: Datos del usuario a crear
-        current_user: Usuario autenticado actual
+        db: Database session
+        user_in: User data to create
+        current_user: Current authenticated user
         
     Returns:
-        Usuario creado
+        Created user
         
     Raises:
-        HTTPException: Si el email ya está registrado
+        HTTPException: If the email already exists
     """
     try:
         user = await create_user(db, user_in)
@@ -79,13 +79,13 @@ async def read_user_me(
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Obtiene información del usuario autenticado actual.
+    Get information about the currently authenticated user.
     
     Args:
-        current_user: Usuario autenticado actual
+        current_user: Current authenticated user
         
     Returns:
-        Información del usuario actual
+        Information about the current user
     """
     return current_user
 
@@ -98,18 +98,18 @@ async def update_user_me(
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Actualiza información del propio usuario autenticado.
+    Update information about the currently authenticated user.
     
     Args:
-        db: Sesión de base de datos
-        user_in: Datos a actualizar
-        current_user: Usuario autenticado actual
+        db: Database session
+        user_in: Data to update
+        current_user: Current authenticated user
         
     Returns:
-        Información del usuario actualizada
+        Updated user information
     """
-    # Restringir los campos que un usuario puede actualizar de sí mismo
-    # (no permitir cambiar rol, permisos, etc.)
+    # Restrict the fields that a user can update themselves
+    # (do not allow changing role, permissions, etc.)
     allowed_fields = {"full_name", "password"}
     user_data = user_in.dict(exclude_unset=True)
     restricted_data = {k: v for k, v in user_data.items() if k in allowed_fields}
@@ -120,40 +120,40 @@ async def update_user_me(
 
 @router.get("/{user_id}", response_model=UserSchema)
 async def read_user_by_id(
-    user_id: uuid.UUID,
+    user_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ) -> Any:
     """
-    Obtiene información de un usuario específico por su ID.
+    Get information from a specific user by their ID.
     
-    Solo superusuarios y managers pueden acceder a información de cualquier usuario.
-    Los usuarios normales solo pueden acceder a su propia información.
+    Only superusers and managers can access information from any user.
+    Normal users can only access their own information.
     
     Args:
-        user_id: ID del usuario a obtener
-        db: Sesión de base de datos
-        current_user: Usuario autenticado actual
+        user_id: ID of the user to get
+        db: Database session
+        current_user: Current authenticated user
         
     Returns:
-        Información del usuario solicitado
+        Information of the requested user
         
     Raises:
-        HTTPException: Si el usuario no existe o no se tienen permisos
+        HTTPException: If the user does not exist or you do not have permission
     """
     user = await get_user(db, user_id)
     
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado",
+            detail="User not found",
         )
         
-    # Si no es superuser o manager, solo puede acceder a su propia información
+    # If not superuser or manager, only can access their own information
     if str(user.id) != str(current_user.id) and not await get_current_manager_or_admin(current_user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permisos suficientes",
+            detail="You do not have enough permissions",
         )
         
     return user
@@ -163,67 +163,67 @@ async def read_user_by_id(
 async def update_specific_user(
     *,
     db: AsyncSession = Depends(get_db),
-    user_id: uuid.UUID,
+    user_id: int,
     user_in: UserUpdate,
     current_user: User = Depends(get_current_manager_or_admin),
 ) -> Any:
     """
-    Actualiza información de un usuario específico.
+    Update information from a specific user.
     
-    Solo accesible para administradores y managers.
+    Only accessible to administrators and managers.
     
     Args:
-        db: Sesión de base de datos
-        user_id: ID del usuario a actualizar
-        user_in: Datos a actualizar
-        current_user: Usuario autenticado actual
+        db: Database session
+        user_id: ID of the user to update
+        user_in: Data to update
+        current_user: Current authenticated user
         
     Returns:
-        Información del usuario actualizada
+        Information of the updated user
         
     Raises:
-        HTTPException: Si el usuario no existe
+        HTTPException: If the user does not exist
     """
     user = await get_user(db, user_id)
     
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado",
+            detail="User not found",
         )
         
     user = await update_user(db, user, user_in)
     return user
 
 
-@router.delete("/{user_id}", response_model=UserSchema)
+@router.delete("/{user_id}")
 async def delete_specific_user(
     *,
     db: AsyncSession = Depends(get_db),
-    user_id: uuid.UUID,
+    user_id: int,
     current_user: User = Depends(get_current_superuser),
 ) -> Any:
     """
-    Elimina un usuario específico.
+    Delete a specific user.
     
-    Solo accesible para superusuarios.
+    Only accessible to superusers.
     
     Args:
-        db: Sesión de base de datos
-        user_id: ID del usuario a eliminar
-        current_user: Usuario autenticado actual
+        db: Database session
+        user_id: ID of the user to delete
+        current_user: Current authenticated user
         
     Returns:
-        Información del usuario eliminado
+        Information of the deleted user
         
     Raises:
-        HTTPException: Si el usuario no existe o si se intenta eliminar el propio usuario
+        HTTPException: If the user does not exist or if you try to delete your own user
     """
-    # Evitar que un usuario se elimine a sí mismo
-    if str(user_id) == str(current_user.id):
+    # Avoid that a user deletes themselves
+    if user_id == current_user.id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puedes eliminar tu propio usuario",
+            detail="You cannot delete your own user",
         )
         
     user = await delete_user(db, user_id)
@@ -231,7 +231,7 @@ async def delete_specific_user(
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado",
+            detail="User not found",
         )
         
-    return user 
+    return Response(status_code=status.HTTP_204_NO_CONTENT) 
