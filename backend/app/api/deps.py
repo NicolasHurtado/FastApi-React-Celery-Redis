@@ -1,5 +1,5 @@
 from typing import AsyncGenerator, Optional
-
+import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
@@ -14,6 +14,8 @@ from app.db.session import get_db
 from app.models.user import User, UserRole
 from app.schemas.token import TokenPayload
 
+
+logger = logging.getLogger(__name__)
 # Token URL (ruta donde se obtiene el token)
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
@@ -45,15 +47,30 @@ async def get_current_user(
     except (JWTError, ValidationError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No se pudo validar las credenciales",
+            detail="It is not possible to validate the credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    if not token_data.sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="The token does not have a user identifier"
+        )
+    
+    # Convertir el subject (ID del usuario) a entero
+    try:
+        user_id = int(token_data.sub)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="The user identifier is invalid"
+        )
         
-    user = await get_user(db, token_data.sub)
+    user = await get_user(db, user_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Usuario no encontrado"
+            detail="User not found"
         )
     
     return user

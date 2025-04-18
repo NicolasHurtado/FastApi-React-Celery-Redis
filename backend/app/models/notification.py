@@ -12,6 +12,7 @@ class NotificationType(str, enum.Enum):
     REQUEST_APPROVED = "request_approved"
     REQUEST_REJECTED = "request_rejected"
     REQUEST_CANCELLED = "request_cancelled"
+    REQUEST_REVIEWED = "request_reviewed"
     COMMENT_ADDED = "comment_added"
     OTHER = "other"
 

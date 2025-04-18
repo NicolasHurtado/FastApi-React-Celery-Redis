@@ -1,27 +1,24 @@
-from fastapi import FastAPI
+""" Main file for the backend application """
+from fastapi import FastAPI, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-# from app.db.session import engine, Base # Ya no se necesita importar Base aquí
-# from app.db.session import engine # Tampoco engine por ahora
-from app.core.config import settings # Importar settings
-from app.core.logging import setup_logging, get_logger # Importar configuración de logging
-from app.api.api_v1.api import api_router # Importar el router de la API
-# Importar modelos ORM (cuando existan)
-# from app.models.user import User # Ejemplo, descomentar cuando exista User
+from app.core.config import settings 
+from app.core.logging import setup_logging, get_logger 
+from app.api.api_v1.api import api_router 
 
-# Configurar el sistema de logging
+# Configure the logging system
 setup_logging(log_level=settings.LOG_LEVEL)
 logger = get_logger(__name__)
 
-# --- La función create_db_and_tables y el evento on_startup se eliminan ---
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
+    version=settings.VERSION,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-    version=settings.VERSION
+    docs_url="/docs"
 )
 
-# Configuración de CORS
+# Configure CORS
 if settings.BACKEND_CORS_ORIGINS:
     app.add_middleware(
         CORSMiddleware,

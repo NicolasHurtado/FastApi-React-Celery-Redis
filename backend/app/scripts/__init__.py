@@ -1,0 +1,1 @@
+# Módulo para scripts utilitarios de la aplicación 

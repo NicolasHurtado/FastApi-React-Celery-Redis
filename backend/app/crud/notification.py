@@ -1,4 +1,5 @@
-import uuid
+""" CRUD operations for notifications """
+import logging
 from typing import List, Optional, Union, Dict, Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,8 +8,9 @@ from sqlalchemy import and_, or_
 
 from app.models.notification import Notification, NotificationType
 from app.models.vacation_request import VacationRequest, RequestStatus
-from app.schemas.notification import NotificationCreate, NotificationUpdate
+from app.schemas.notification import NotificationCreate, NotificationUpdate 
 
+logger = logging.getLogger(__name__)
 
 async def create_notification(
     db: AsyncSession, 
@@ -34,6 +36,7 @@ async def create_notification(
     db.add(db_obj)
     await db.commit()
     await db.refresh(db_obj)
+    logger.info(f"Notification created: {db_obj}")
     return db_obj
 
 
@@ -57,7 +60,7 @@ async def get_notification(
 
 async def get_user_notifications(
     db: AsyncSession, 
-    user_id: Union[int, uuid.UUID],
+    user_id: int,
     skip: int = 0, 
     limit: int = 100,
     unread_only: bool = False
@@ -166,7 +169,7 @@ async def mark_as_read(
 
 async def mark_all_as_read(
     db: AsyncSession,
-    user_id: Union[int, uuid.UUID]
+    user_id: int,
 ) -> int:
     """
     Marca todas las notificaciones de un usuario como leídas.

@@ -158,7 +158,6 @@ async def get_user_from_token(token: str) -> User:
         HTTPException: Si el token es inválido
     """
     try:
-        from sqlalchemy.ext.asyncio import AsyncSession
         from app.db.session import get_db
         from app.crud.user import get_user
         

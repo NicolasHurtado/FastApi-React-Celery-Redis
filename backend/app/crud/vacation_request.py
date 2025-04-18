@@ -14,18 +14,18 @@ from app.schemas.vacation_request import VacationRequestCreate, VacationRequestU
 async def create_vacation_request(
     db: AsyncSession, 
     obj_in: VacationRequestCreate, 
-    requester_id: uuid.UUID
+    requester_id: int
 ) -> VacationRequest:
     """
-    Crea una nueva solicitud de vacaciones.
+    Create a new vacation request.
     
     Args:
-        db: Sesión de base de datos
-        obj_in: Datos de la solicitud
-        requester_id: ID del usuario que realiza la solicitud
+        db: Database session
+        obj_in: Request data
+        requester_id: ID of the user who is making the request
         
     Returns:
-        Solicitud de vacaciones creada
+        Created vacation request
     """
     db_obj = VacationRequest(
         start_date=obj_in.start_date,
@@ -43,17 +43,17 @@ async def create_vacation_request(
 
 async def get_vacation_request(
     db: AsyncSession, 
-    id: uuid.UUID
+    id: int
 ) -> Optional[VacationRequest]:
     """
-    Obtiene una solicitud de vacaciones por su ID.
+    Get a vacation request by its ID.
     
     Args:
-        db: Sesión de base de datos
-        id: ID de la solicitud
+        db: Database session
+        id: ID of the request (can be int or UUID)
         
     Returns:
-        Solicitud de vacaciones encontrada o None
+        Found vacation request or None
     """
     result = await db.execute(select(VacationRequest).where(VacationRequest.id == id))
     return result.scalars().first()
@@ -63,21 +63,21 @@ async def get_vacation_requests(
     db: AsyncSession, 
     skip: int = 0, 
     limit: int = 100,
-    requester_id: Optional[uuid.UUID] = None,
+    requester_id: Optional[int] = None,
     status: Optional[RequestStatus] = None
 ) -> List[VacationRequest]:
     """
-    Obtiene una lista de solicitudes de vacaciones con filtros opcionales.
+    Get a list of vacation requests with optional filters.
     
     Args:
-        db: Sesión de base de datos
-        skip: Número de registros a saltar
-        limit: Número máximo de registros a devolver
-        requester_id: Filtrar por solicitante
-        status: Filtrar por estado
+        db: Database session
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+        requester_id: Filter by requester
+        status: Filter by status
         
     Returns:
-        Lista de solicitudes de vacaciones
+        List of vacation requests
     """
     query = select(VacationRequest)
     conditions = []
@@ -98,39 +98,39 @@ async def get_vacation_requests(
 
 async def get_vacation_requests_for_review(
     db: AsyncSession,
-    reviewer_id: uuid.UUID,
+    reviewer_id: int,
     skip: int = 0,
     limit: int = 100,
     status: Optional[RequestStatus] = None
 ) -> List[VacationRequest]:
     """
-    Obtiene solicitudes de vacaciones para revisión por un manager o admin.
+    Get vacation requests for review by a manager or admin.
     
     Args:
-        db: Sesión de base de datos
-        reviewer_id: ID del revisor (manager o admin)
-        skip: Número de registros a saltar
-        limit: Número máximo de registros a devolver
-        status: Filtrar por estado
+        db: Database session
+        reviewer_id: ID of the reviewer (manager or admin)
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+        status: Filter by status
         
     Returns:
-        Lista de solicitudes para revisión
+        List of requests for review
     """
-    # Primero obtenemos el rol del revisor
+    # First get the reviewer's role
     reviewer_result = await db.execute(select(User).where(User.id == reviewer_id))
     reviewer = reviewer_result.scalars().first()
     
     if not reviewer:
         return []
     
-    # Si es admin, puede ver todas las solicitudes
+    # If it's an admin, can see all requests
     if reviewer.role == UserRole.ADMIN:
         query = select(VacationRequest)
-    # Si es manager, solo ve las solicitudes de sus empleados (por ahora todas)
+    # If it's a manager, only see requests of their employees (for now all)
     elif reviewer.role == UserRole.MANAGER:
         query = select(VacationRequest)
     else:
-        # No es ni admin ni manager, no debería ver solicitudes de otros
+        # It's neither admin nor manager, shouldn't see requests of others
         return []
     
     if status:
@@ -145,26 +145,26 @@ async def update_vacation_request(
     db: AsyncSession,
     db_obj: VacationRequest,
     obj_in: Union[VacationRequestUpdate, Dict[str, Any]],
-    reviewer_id: Optional[uuid.UUID] = None
+    reviewer_id: Optional[int] = None
 ) -> VacationRequest:
     """
-    Actualiza una solicitud de vacaciones.
+    Update a vacation request.
     
     Args:
-        db: Sesión de base de datos
-        db_obj: Objeto de solicitud existente
-        obj_in: Datos de actualización
-        reviewer_id: ID del revisor, si aplica
+        db: Database session
+        db_obj: Existing request object
+        obj_in: Update data
+        reviewer_id: ID of the reviewer, if applicable
         
     Returns:
-        Solicitud actualizada
+        Updated request
     """
     if isinstance(obj_in, dict):
         update_data = obj_in
     else:
         update_data = obj_in.dict(exclude_unset=True)
     
-    # Si se está cambiando el estado, registramos quién lo hizo y cuándo
+    # If changing the status, record who did it and when
     if "status" in update_data and update_data["status"] != db_obj.status:
         db_obj.updated_at = date.today()
         if reviewer_id:
@@ -181,17 +181,17 @@ async def update_vacation_request(
 
 async def delete_vacation_request(
     db: AsyncSession, 
-    id: uuid.UUID
+    id: int
 ) -> Optional[VacationRequest]:
     """
-    Elimina una solicitud de vacaciones.
+    Delete a vacation request.
     
     Args:
-        db: Sesión de base de datos
-        id: ID de la solicitud
+        db: Database session
+        id: ID of the request
         
     Returns:
-        Solicitud eliminada o None
+        Deleted request or None
     """
     obj = await get_vacation_request(db, id)
     if not obj:

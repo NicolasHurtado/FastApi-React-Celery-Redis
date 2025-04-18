@@ -15,7 +15,7 @@ class VacationRequestBase(BaseModel):
     @validator('end_date')
     def end_date_must_be_after_start_date(cls, v, values):
         if 'start_date' in values and v < values['start_date']:
-            raise ValueError('end_date debe ser posterior a start_date')
+            raise ValueError('end_date should be after start_date')
         return v
 
 
@@ -35,7 +35,7 @@ class VacationRequestUpdate(BaseModel):
     @validator('end_date')
     def end_date_must_be_after_start_date(cls, v, values):
         if v and 'start_date' in values and values['start_date'] and v < values['start_date']:
-            raise ValueError('end_date debe ser posterior a start_date')
+            raise ValueError('end_date should be after start_date')
         return v
 
 
